@@ -21,7 +21,7 @@ public class Leader : MonoBehaviour {
 	public void Begin () {
 		// starts it in a direction, adds itself to the gameobject list, makes move repeating
 		direction = Vector2.right * moveDistance;
-		tail.Add(gameObject);
+		tail.Insert(0, gameObject);
 		InvokeRepeating ("Move", 0.1f * speed, 0.1f * speed);
 	}
 

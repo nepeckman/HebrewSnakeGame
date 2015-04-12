@@ -20,6 +20,7 @@ public class GameController : MonoBehaviour {
 	public GUIText textbox;
 	public GUIText lowerbox;
 	public GUIText alertbox;
+	public GUIText livesbox;
 
 	// food is kept in a list for easy deletion and management
 	public List<GameObject> food = new List<GameObject>();
@@ -41,7 +42,6 @@ public class GameController : MonoBehaviour {
 	private bool gamestart = false;
 	private bool needToRestart = false;
 	private int lives;
-	List<GameObject> checkpoint = new List<GameObject> ();
 
 	public GameObject leadletter;
 	public GameObject bet;
@@ -72,12 +72,14 @@ public class GameController : MonoBehaviour {
 
 	// gets a leader and displays start text
 	void Start(){
-		leadletter = GameObject.FindWithTag ("Lead Letter");
-		leader = (Leader) leadletter.GetComponent(typeof(Leader));
+		clone = Instantiate (leadletter, new Vector2(0.0f, 0.0f), Quaternion.identity);
+		letterclone = clone as GameObject;
+		leader = (Leader) letterclone.GetComponent(typeof(Leader));
 		textbox.text = "Press any key to start!";
 		lowerbox.text = "";
 		alertbox.text = "";
 		lives = 3;
+		livesbox.text = "Lives: " + lives;
 	}
 
 	// checks to restart and start the game
@@ -126,9 +128,6 @@ public class GameController : MonoBehaviour {
 		if (!gameover) {
 			SpawnFood ();
 		}
-		if ((float) (leader.tail.Count/5) == (float)(leader.tail.Count)/5.0f){
-			SaveCheckpoints();
-		}
 	}
 
 	// called by the spawn tail method to replace food after SpawnTail deletes it
@@ -160,51 +159,29 @@ public class GameController : MonoBehaviour {
 		}
 		counter = 0;
 	}
-
-	public void SaveCheckpoints(){
-		checkpoint = leader.tail;
-		Debug.Log (checkpoint[0].transform.position);
-	}
-
-	public void GetCheckpoints(){
-		int size = checkpoint.Count;
-		for (int i = 0; i < size; i++) {
-			if (i == 0){
-				Debug.Log (checkpoint[0].transform.position);
-				Instantiate(leadletter, checkpoint[0].transform.position, Quaternion.identity);
-				leader.tail.Add(leadletter);
-			} else {
-				newletter = WhichLetter (i);
-				// newletter is a prefab object, clone is an object, I needed to get it into a game object
-				// to manage it correctly (add it to gameobject lists and get its script component)
-				clone = Instantiate (newletter, checkpoint[i].transform.position, Quaternion.identity);
-				letterclone = clone as GameObject;
-				leader.tail.Add (letterclone);
-				letterscript = (Letter) letterclone.GetComponent(typeof(Letter));
-				// needs to start as not Tail so beginning letters (that spawn on the leader)
-				// dont end the game, changed to true after movement is applied
-				letterscript.isTail = false;
-				letterscript.isFood = false;
-			}
-		}
-		Debug.Log("Hi from getcheckpoints");
-	}
+	
+	
 
 	// called by walls and letters, if player hits wall or hits tail
 	public void GameOver(bool winner){
-		int size = leader.tail.Count;
-		for (int i=0; i<size; i++) {
-			GameObject letter = leader.tail[size - i - 1];
+		int food_size = food.Count;
+		for (int i=0; i<food_size; i++) {
+			GameObject letter = food[food_size - i - 1];
 			food.Remove (letter);
+			Destroy(letter.gameObject);
+		}
+		int tail_size = leader.tail.Count;
+		for (int i=0; i<tail_size; i++) {
+			GameObject letter = leader.tail[tail_size - i - 1];
+			leader.tail.Remove(letter);
 			Destroy(letter.gameObject);
 
 		}
 		if (lives > 0) {
 			lives--;
-			GetCheckpoints();
+			Retry(tail_size);
 			return;
 		}
-		Debug.Log("Hi from Game over");
 		if (winner) {
 			textbox.text = "Mazel Tov!";
 		} else {
@@ -214,6 +191,35 @@ public class GameController : MonoBehaviour {
 		alertbox.text = "";
 		gameover = true;
 		needToRestart = true;
+	}
+
+	// called if lives is greater than zero, restarts game with progress saved
+	public void Retry(int number_of_letters){
+		for (int idx = 0; idx < number_of_letters; idx++) {
+			if (idx == 0){
+				clone = Instantiate (leadletter, new Vector2(0.0f, 0.0f), Quaternion.identity);
+				letterclone = clone as GameObject;
+				leader.tail.Add (letterclone);
+				leader = (Leader) letterclone.GetComponent(typeof(Leader));
+			} else {
+				newletter = WhichLetter(idx);
+				// newletter is a prefab object, clone is an object, I needed to get it into a game object
+				// to manage it correctly (add it to gameobject lists and get its script component)
+				float x_placement = (float) idx;
+				clone = Instantiate (newletter, new Vector2(-x_placement/2, 0.0f), Quaternion.identity);
+				letterclone = clone as GameObject;
+				leader.tail.Add (letterclone);
+				letterscript = (Letter) letterclone.GetComponent(typeof(Letter));
+				// needs to start as not Tail so beginning letters (that spawn on the leader)
+				// dont end the game, changed to true after movement is applied
+				letterscript.isTail = false;
+				letterscript.isFood = false;
+			}
+			gamestart = false;
+			alertbox.text = "";
+			textbox.text = "Press any key to retry";
+			livesbox.text = "Lives: " + lives;
+		}
 	}
 
 	// gets the prefab object corrosponding to an index
