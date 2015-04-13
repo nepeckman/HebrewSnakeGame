@@ -133,6 +133,8 @@ public class GameController : MonoBehaviour {
 	// called by the spawn tail method to replace food after SpawnTail deletes it
 	void SpawnFood(){
 		// Clears the Wrong Letter text when its no longer relevant
+
+		//TODO better method of handing GUI texts
 		alertbox.text = "";
 		// randomOffset picks one of the 4 boudary arrays
 		int randomOffset = (int)(Random.Range (0, 3));
@@ -177,7 +179,7 @@ public class GameController : MonoBehaviour {
 			Destroy(letter.gameObject);
 
 		}
-		if (lives > 0) {
+		if (lives > 0 && !winner) {
 			lives--;
 			Retry(tail_size);
 			return;
