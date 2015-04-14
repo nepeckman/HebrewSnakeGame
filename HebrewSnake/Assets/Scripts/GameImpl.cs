@@ -3,14 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-[System.Serializable]
-public class Boundary
-{
-	public float[,] spawnZones = new float[4, 4] {{-7.5f, -1.0f, 1.0f, 3.5f}, {1.0f, 7.5f, 1.0f, 3.5f}, 
-		{-7.5f, -1.0f, -4.5f, -1.0f}, {1.0f, 7.5f, -4.5f, -1.0f}};
-}
-
-public class GameController : MonoBehaviour {
+public abstract class GameImpl : MonoBehaviour, Game {
 
 	// leader is used to deal with the game objects in the tail
 	// boundary sets the bounds for food spawning
@@ -24,7 +17,7 @@ public class GameController : MonoBehaviour {
 
 	// food is kept in a list for easy deletion and management
 	public List<GameObject> food = new List<GameObject>();
-
+	
 	// these variables are used in multiple methods and are declared before
 	// to avoid problems
 	private Letter letterscript;
@@ -33,16 +26,12 @@ public class GameController : MonoBehaviour {
 	private GameObject newletter;
 	Object clone;
 	GameObject letterclone;
-
+	
 	// counter needed for a while loop in an area that wouldn't accept a for loop
 	public int counter;
 
-	// bools used to start, restart, and end the game, int used for lives
-	private bool gameover = false;
-	private bool gamestart = false;
-	private bool needToRestart = false;
 	private int lives;
-
+	
 	public GameObject leadletter;
 	public GameObject bet;
 	public GameObject vet;
@@ -70,40 +59,25 @@ public class GameController : MonoBehaviour {
 	public GameObject sin;
 	public GameObject tav;
 
-	// gets a leader and displays start text
-	void Start(){
+	// Use this for initialization
+	void Start () {
 		clone = Instantiate (leadletter, new Vector2(0.0f, 0.0f), Quaternion.identity);
 		letterclone = clone as GameObject;
 		leader = (Leader) letterclone.GetComponent(typeof(Leader));
 		textbox.text = "Press any key to start!";
 		lowerbox.text = "";
 		alertbox.text = "";
-		lives = 3;
 		livesbox.text = "Lives: " + lives;
+		boundary = new Boundary (new SpawnZone (-7.5f, -1.0f, 1.0f, 3.5f), new SpawnZone (1.0f, 7.5f, 1.0f, 3.5f), new SpawnZone (-7.5f, -1.0f, -4.5f, -1.0f), new SpawnZone (1.0f, 7.5f, -4.5f, -1.0f));
+	}
+	
+	// Update is called once per frame
+	void Update () {
+	
 	}
 
-	// checks to restart and start the game
-	void Update(){
-		if (!gamestart && Input.anyKey) {
-			leader.Begin ();
-			Begin ();
-			gamestart = true;
-		}
-		if (needToRestart && Input.GetKeyDown("return")) {
-			Application.LoadLevel (Application.loadedLevel);
-		}
-	}
-
-	// begins the game after update detects a start command
-	void Begin(){
-		SpawnFood ();
-	}
-
-
-
-	// called by the letter script if the letter is the correct food
 	public void SpawnTail(){
-		newletter = WhichLetter (leader.tail.Count);
+		newletter = nextLetter ();
 		// newletter is a prefab object, clone is an object, I needed to get it into a game object
 		// to manage it correctly (add it to gameobject lists and get its script component)
 		clone = Instantiate (newletter, leader.tail.Last ().transform.position, Quaternion.identity);
@@ -114,43 +88,26 @@ public class GameController : MonoBehaviour {
 		// dont end the game, changed to true after movement is applied
 		letterscript.isTail = false;
 		letterscript.isFood = false;
-		int size = food.Count;
-		// deletes the food, because I'm deleting I can't use foreach and I need to set 
-		// a constant to loop until
-		for (int i=0; i<size; i++) {
-			GameObject letter = food[size - i - 1];
-			food.Remove (letter);
-			Destroy(letter.gameObject);
-		}
-		if (leader.tail.Count > 25) {
-			GameOver(true);
-		}
-		if (!gameover) {
-			SpawnFood ();
-		}
 	}
 
-	// called by the spawn tail method to replace food after SpawnTail deletes it
-	void SpawnFood(){
+	public void SpawnFood(GameObject newletter){
 		// Clears the Wrong Letter text when its no longer relevant
-
+		
 		//TODO better method of handing GUI texts
 		alertbox.text = "";
+		textbox.text = newletter.tag;
 		// randomOffset picks one of the 4 boudary arrays
 		int randomOffset = (int)(Random.Range (0, 3));
 		while (counter < 3) {
-			if (counter == 0){
-				newletter = WhichLetter (leader.tail.Count);
-				textbox.text = newletter.tag;
-			} else {
+			if (counter != 0){
 				int letterIdx = (int)(Random.Range (1, 25));
-				newletter = WhichLetter (letterIdx);
+				newletter = nextLetter (letterIdx);
 			}
+			Vector2 spawnpoint;
 			do {
-			x = (int)(Random.Range (boundary.spawnZones[randomOffset, 0], boundary.spawnZones[randomOffset, 1]));
-			y = (int)(Random.Range (boundary.spawnZones[randomOffset, 2], boundary.spawnZones[randomOffset, 3]));
-			} while (Mathf.Abs(leader.transform.position.x - x) < 1 && Mathf.Abs(leader.transform.position.y - y) < 1);
-			clone = Instantiate (newletter, new Vector2(x, y), Quaternion.identity);
+				spawnpoint = boundary.getSpawnPoint((BoundaryEnum) randomOffset);
+			} while (Mathf.Abs(leader.transform.position.x - spawnpoint.x) < 1 && Mathf.Abs(leader.transform.position.y - spawnpoint.y) < 1);
+			clone = Instantiate (newletter, spawnpoint, Quaternion.identity);
 			letterclone = clone as GameObject;
 			food.Add(letterclone);
 			letterscript = (Letter) letterclone.GetComponent(typeof(Letter));
@@ -161,29 +118,37 @@ public class GameController : MonoBehaviour {
 		}
 		counter = 0;
 	}
-	
-	
 
-	// called by walls and letters, if player hits wall or hits tail
-	public void GameOver(bool winner){
-		int food_size = food.Count;
-		for (int i=0; i<food_size; i++) {
-			GameObject letter = food[food_size - i - 1];
+	public 	void DestroyTail(){
+		int size = leader.tail.Count;
+		for (int i=0; i<size; i++) {
+			GameObject letter = leader.tail[size - i - 1];
+			leader.tail.Remove(letter);
+			Destroy(letter.gameObject);
+		}
+	}
+
+	public 	void DestroyFood(){
+		int size = food.Count;
+		for (int i=0; i<size; i++) {
+			GameObject letter = food[size - i - 1];
 			food.Remove (letter);
 			Destroy(letter.gameObject);
 		}
-		int tail_size = leader.tail.Count;
-		for (int i=0; i<tail_size; i++) {
-			GameObject letter = leader.tail[tail_size - i - 1];
-			leader.tail.Remove(letter);
-			Destroy(letter.gameObject);
+	}
 
-		}
-		if (lives > 0 && !winner) {
+	public void Death(){
+		if (lives > 0) {
 			lives--;
-			Retry(tail_size);
-			return;
+			Retry (leader.tail.Count);
+		} else {
+			GameOver(false);
 		}
+	}
+
+	public void GameOver(bool winner){
+		DestroyFood ();
+		DestroyTail ();
 		if (winner) {
 			textbox.text = "Mazel Tov!";
 		} else {
@@ -191,11 +156,8 @@ public class GameController : MonoBehaviour {
 		}
 		lowerbox.text = "Press enter to restart!";
 		alertbox.text = "";
-		gameover = true;
-		needToRestart = true;
 	}
 
-	// called if lives is greater than zero, restarts game with progress saved
 	public void Retry(int number_of_letters){
 		for (int idx = 0; idx < number_of_letters; idx++) {
 			if (idx == 0){
@@ -204,7 +166,7 @@ public class GameController : MonoBehaviour {
 				leader.tail.Add (letterclone);
 				leader = (Leader) letterclone.GetComponent(typeof(Leader));
 			} else {
-				newletter = WhichLetter(idx);
+				newletter = nextLetter(idx);
 				// newletter is a prefab object, clone is an object, I needed to get it into a game object
 				// to manage it correctly (add it to gameobject lists and get its script component)
 				float x_placement = (float) idx;
@@ -217,11 +179,34 @@ public class GameController : MonoBehaviour {
 				letterscript.isTail = false;
 				letterscript.isFood = false;
 			}
-			gamestart = false;
 			alertbox.text = "";
 			textbox.text = "Press any key to retry";
 			livesbox.text = "Lives: " + lives;
 		}
+	}
+
+	public bool checkVictory(){
+		if (leader.tail.Count > 25) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	public void setText(GUIText GUI_textbox, string message){
+		GUI_textbox.text = message;
+	}
+
+	public void setText(string message){
+		this.alertbox.text = message;
+	}
+
+	public GameObject nextLetter(){
+		return WhichLetter (leader.tail.Count);
+	}
+
+	public GameObject nextLetter(int index){
+		return WhichLetter (index);
 	}
 
 	// gets the prefab object corrosponding to an index

@@ -18,8 +18,9 @@ public class Leader : MonoBehaviour {
 	private Vector2 position;
 	private Letter letterscript;
 	
-	public void Begin () {
+	public void Begin (float speed) {
 		// starts it in a direction, adds itself to the gameobject list, makes move repeating
+		this.speed = speed;
 		direction = Vector2.right * moveDistance;
 		tail.Insert(0, gameObject);
 		InvokeRepeating ("Move", 0.1f * speed, 0.1f * speed);

@@ -4,11 +4,11 @@ using System.Collections;
 public class Walls : MonoBehaviour {
 
 	// gets gamecontroller for gameover method
-	public GameController gamecontroller;
+	public Game gamecontroller;
 
 	void OnTriggerEnter2D(Collider2D other){
 		if (other.gameObject.CompareTag("Lead Letter")){
-			gamecontroller.GameOver(false);
+			gamecontroller.Death ();
 		}
 	}
 }
