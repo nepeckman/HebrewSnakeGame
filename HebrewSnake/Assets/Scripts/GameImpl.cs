@@ -5,15 +5,26 @@ using System.Linq;
 
 public abstract class GameImpl : MonoBehaviour, Game {
 
+	public static readonly Boundary NORMAL_BOUNDARY = new Boundary (new SpawnZone (-7f, -1.0f, 1.0f, 3f), new SpawnZone (1.0f, 7f, 1.0f, 3f), new SpawnZone (-7f, -1.0f, -4f, -1.0f), new SpawnZone (1.0f, 7f, -4f, -1f));
+	public const int EASY_LIVES = 3;
+	public const float EASY_SPEED = 1.3f;
+	public const int NORMAL_LIVES = 2;
+	public const float NORMAL_SPEED = 1;
+	public const int HARD_LIVES = 1;
+	public const float HARD_SPEED = 0.5f;
+
+
 	// leader is used to deal with the game objects in the tail
 	// boundary sets the bounds for food spawning
 	// textboxes display the text
+	public Manager manager;
 	private Leader leader;
 	public Boundary boundary;
 	public GUIText textbox;
 	public GUIText lowerbox;
 	public GUIText alertbox;
 	public GUIText livesbox;
+	private bool restart;
 
 	// food is kept in a list for easy deletion and management
 	public List<GameObject> food = new List<GameObject>();
@@ -26,11 +37,13 @@ public abstract class GameImpl : MonoBehaviour, Game {
 	private GameObject newletter;
 	Object clone;
 	GameObject letterclone;
+	GameObject guiclone;
 	
 	// counter needed for a while loop in an area that wouldn't accept a for loop
 	public int counter;
 
 	private int lives;
+	private float speed;
 	
 	public GameObject leadletter;
 	public GameObject bet;
@@ -58,23 +71,46 @@ public abstract class GameImpl : MonoBehaviour, Game {
 	public GameObject shin;
 	public GameObject sin;
 	public GameObject tav;
+	
 
-	// Use this for initialization
-	void Start () {
+	public IEnumerator startCoroutine(Boundary boundary, int lives, float speed){
+		guiclone = GameObject.FindGameObjectWithTag ("manager");
+		manager = (Manager) guiclone.GetComponent (typeof(Manager));
+		this.lives = lives;
+		this.boundary = boundary;
+		this.speed = speed;
+		restart = false;
 		clone = Instantiate (leadletter, new Vector2(0.0f, 0.0f), Quaternion.identity);
 		letterclone = clone as GameObject;
 		leader = (Leader) letterclone.GetComponent(typeof(Leader));
-		textbox.text = "Press any key to start!";
+
+		guiclone = GameObject.FindGameObjectWithTag ("textbox");
+		textbox = (GUIText) guiclone.GetComponent (typeof(GUIText));
+		guiclone = GameObject.FindGameObjectWithTag ("lowerbox");
+		lowerbox = (GUIText) guiclone.GetComponent (typeof(GUIText));
+		guiclone = GameObject.FindGameObjectWithTag ("alertbox");
+		alertbox = (GUIText) guiclone.GetComponent (typeof(GUIText));
+		guiclone =  GameObject.FindGameObjectWithTag ("livesbox");
+		livesbox = (GUIText) guiclone.GetComponent (typeof(GUIText));
+
+		textbox.text = "5";
 		lowerbox.text = "";
 		alertbox.text = "";
 		livesbox.text = "Lives: " + lives;
-		boundary = new Boundary (new SpawnZone (-7.5f, -1.0f, 1.0f, 3.5f), new SpawnZone (1.0f, 7.5f, 1.0f, 3.5f), new SpawnZone (-7.5f, -1.0f, -4.5f, -1.0f), new SpawnZone (1.0f, 7.5f, -4.5f, -1.0f));
+		yield return new WaitForSeconds(1f);
+		textbox.text = "4";
+		yield return new WaitForSeconds(1f);
+		textbox.text = "3";
+		yield return new WaitForSeconds(1f);
+		textbox.text = "2";
+		yield return new WaitForSeconds(1f);
+		textbox.text = "1";
+		yield return new WaitForSeconds(1f);
+		leader.Begin(speed);
+		SpawnFood(nextLetter());
+		yield return null;
 	}
-	
-	// Update is called once per frame
-	void Update () {
-	
-	}
+
 
 	public void SpawnTail(){
 		newletter = nextLetter ();
@@ -138,9 +174,9 @@ public abstract class GameImpl : MonoBehaviour, Game {
 	}
 
 	public void Death(){
-		if (lives > 0) {
+		if (lives > 1) {
 			lives--;
-			Retry (leader.tail.Count);
+			startRetry(leader.tail.Count, speed);
 		} else {
 			GameOver(false);
 		}
@@ -154,11 +190,17 @@ public abstract class GameImpl : MonoBehaviour, Game {
 		} else {
 			textbox.text = "Oi Vey!";
 		}
-		lowerbox.text = "Press enter to restart!";
 		alertbox.text = "";
+		manager.endGame (this.gameObject);
 	}
 
-	public void Retry(int number_of_letters){
+	public IEnumerator Retry(int number_of_letters, float speed){
+		while (!restart) {
+			if (Input.anyKey){
+				restart = true;
+			}
+			yield return null;
+		}
 		for (int idx = 0; idx < number_of_letters; idx++) {
 			if (idx == 0){
 				clone = Instantiate (leadletter, new Vector2(0.0f, 0.0f), Quaternion.identity);
@@ -179,10 +221,22 @@ public abstract class GameImpl : MonoBehaviour, Game {
 				letterscript.isTail = false;
 				letterscript.isFood = false;
 			}
-			alertbox.text = "";
-			textbox.text = "Press any key to retry";
-			livesbox.text = "Lives: " + lives;
+			yield return null;
 		}
+		alertbox.text = "";
+		livesbox.text = "Lives: " + lives;
+		yield return new WaitForSeconds(1f);
+		textbox.text = "4";
+		yield return new WaitForSeconds(1f);
+		textbox.text = "3";
+		yield return new WaitForSeconds(1f);
+		textbox.text = "2";
+		yield return new WaitForSeconds(1f);
+		textbox.text = "1";
+		yield return new WaitForSeconds(1f);
+		leader.Begin(speed);
+		SpawnFood(nextLetter());
+		yield return null;
 	}
 
 	public bool checkVictory(){
@@ -207,6 +261,13 @@ public abstract class GameImpl : MonoBehaviour, Game {
 
 	public GameObject nextLetter(int index){
 		return WhichLetter (index);
+	}
+
+	public void startRetry(int number_of_letters, float speed){
+		DestroyFood ();
+		DestroyTail ();
+		textbox.text = "Press any key to restart!";
+		StartCoroutine(Retry(number_of_letters, speed));
 	}
 
 	// gets the prefab object corrosponding to an index

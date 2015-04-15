@@ -14,8 +14,6 @@ public class Letter : MonoBehaviour {
 	void Start(){
 		GameObject controller = GameObject.FindWithTag ("GameController");
 		gamecontroller = (Game) controller.GetComponent(typeof(Game));
-		GameObject leadletter = GameObject.FindWithTag ("Lead Letter");
-		leader = (Leader)leadletter.GetComponent (typeof(Leader));
 	}
 
 	void OnTriggerEnter2D(Collider2D other){

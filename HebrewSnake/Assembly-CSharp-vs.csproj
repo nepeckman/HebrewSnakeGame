@@ -52,6 +52,12 @@
      <Compile Include="Assets\Scripts\GameImpl.cs" />
      <Compile Include="Assets\Scripts\Leader.cs" />
      <Compile Include="Assets\Scripts\Letter.cs" />
+     <Compile Include="Assets\Scripts\Lv1Game.cs" />
+     <Compile Include="Assets\Scripts\Lv2Game.cs" />
+     <Compile Include="Assets\Scripts\Lv3Game.cs" />
+     <Compile Include="Assets\Scripts\Lv4Game.cs" />
+     <Compile Include="Assets\Scripts\Lv5Game.cs" />
+     <Compile Include="Assets\Scripts\Manager.cs" />
      <Compile Include="Assets\Scripts\SpawnZone.cs" />
      <Compile Include="Assets\Scripts\Walls.cs" />
  <Reference Include="UnityEngine.UI">
