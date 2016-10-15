@@ -18,11 +18,11 @@ public class Letter : MonoBehaviour {
 
 	void OnTriggerEnter2D(Collider2D other){
 		if (isFood && other.gameObject.CompareTag ("Lead Letter") && gameObject.tag == gamecontroller.nextLetter().tag) {
+			gamecontroller.ScoreSound();
 			gamecontroller.DestroyFood();
 			gamecontroller.SpawnTail ();
-
 			if (gamecontroller.checkVictory()){
-				gamecontroller.GameOver(true);
+				gamecontroller.startGameOver(true);
 			} else {
 				GameObject newletter = gamecontroller.nextLetter();
 				gamecontroller.SpawnFood(newletter);

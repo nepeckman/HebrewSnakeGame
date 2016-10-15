@@ -26,6 +26,9 @@ public abstract class GameImpl : MonoBehaviour, Game {
 	public GUIText livesbox;
 	private bool restart;
 
+	public AudioSource failsound;
+	public AudioSource scoresound;
+
 	// food is kept in a list for easy deletion and management
 	public List<GameObject> food = new List<GameObject>();
 	
@@ -76,6 +79,10 @@ public abstract class GameImpl : MonoBehaviour, Game {
 	public IEnumerator startCoroutine(Boundary boundary, int lives, float speed){
 		guiclone = GameObject.FindGameObjectWithTag ("manager");
 		manager = (Manager) guiclone.GetComponent (typeof(Manager));
+		guiclone = GameObject.Find ("Score Sound");
+		scoresound = (AudioSource) guiclone.GetComponent (typeof(AudioSource));
+		guiclone = GameObject.Find ("Fail Sound");
+		failsound = (AudioSource) guiclone.GetComponent (typeof(AudioSource));
 		this.lives = lives;
 		this.boundary = boundary;
 		this.speed = speed;
@@ -173,28 +180,44 @@ public abstract class GameImpl : MonoBehaviour, Game {
 		}
 	}
 
+	public void ScoreSound(){
+		scoresound.Play ();
+	}
+
+	public void FailSound(){
+		failsound.Play ();
+	}
+
 	public void Death(){
-		if (lives > 1) {
-			lives--;
+		FailSound ();
+		lives--;
+		if (lives > 0) {
 			startRetry(leader.tail.Count, speed);
 		} else {
-			GameOver(false);
+			StartCoroutine(GameOver(false));
 		}
 	}
 
-	public void GameOver(bool winner){
+	public void startGameOver(bool winner){
+		StartCoroutine (GameOver (winner));
+	}
+	public IEnumerator GameOver(bool winner){
 		DestroyFood ();
 		DestroyTail ();
+		alertbox.text = "";
+		livesbox.text = "Lives: " + lives;
 		if (winner) {
 			textbox.text = "Mazel Tov!";
 		} else {
 			textbox.text = "Oi Vey!";
 		}
-		alertbox.text = "";
+		yield return new WaitForSeconds(5f);
 		manager.endGame (this.gameObject);
 	}
 
 	public IEnumerator Retry(int number_of_letters, float speed){
+		livesbox.text = "Lives: " + lives;
+		restart = false;
 		while (!restart) {
 			if (Input.anyKey){
 				restart = true;
@@ -224,7 +247,6 @@ public abstract class GameImpl : MonoBehaviour, Game {
 			yield return null;
 		}
 		alertbox.text = "";
-		livesbox.text = "Lives: " + lives;
 		yield return new WaitForSeconds(1f);
 		textbox.text = "4";
 		yield return new WaitForSeconds(1f);

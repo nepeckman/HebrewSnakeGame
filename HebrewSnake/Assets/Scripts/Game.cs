@@ -8,8 +8,11 @@ public interface Game {
 	void SpawnFood(GameObject newletter);
 	void DestroyTail();
 	void DestroyFood();
+	void ScoreSound();
+	void FailSound();
 	void Death();
-	void GameOver(bool winner);
+	void startGameOver(bool winner);
+	IEnumerator GameOver(bool winner);
 	IEnumerator Retry(int number_of_letters, float speed);
 	bool checkVictory();
 	GameObject WhichLetter(int index);
